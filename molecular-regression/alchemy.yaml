@@ -1,0 +1,24 @@
+# Training
+batch_size: 64
+lr: 1e-3
+weight_decay: 1e-5
+gradient_norm: 1.0
+
+# Transformer
+num_layers: 5
+embed_dim: 64
+num_heads: 16
+activation: gelu
+pooling: set2set
+attention_dropout: 0.1
+ffn_dropout: 0.0
+
+# Encoder
+rrwp: no
+
+# Misc
+seed: 0
+wandb_project: null
+wandb_entity: null
+wandb_name: null
+root: ???
