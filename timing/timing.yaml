@@ -1,0 +1,14 @@
+# Scaling dimensions
+batch_size: 32
+num_nodes: 10
+edge_prob: 0.05
+repeats: 100
+
+# Model
+model_name: ET
+embed_dim: 64
+num_heads: 8
+dropout: 0.0
+
+# Outputs
+results_path: ./

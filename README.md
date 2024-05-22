@@ -7,7 +7,9 @@
 [![black](https://img.shields.io/badge/Code%20Style-Black-black.svg?labelColor=gray)](https://black.readthedocs.io/en/stable/)
 [![license](https://img.shields.io/badge/License-MIT-green.svg?labelColor=gray)](https://github.com/ashleve/lightning-hydra-template#license)
 
-Code for our paper [Towards Principled Graph Transformers](https://arxiv.org/abs/2401.10119).
+Code for our paper [Towards Principled Graph Transformers](https://arxiv.org/abs/2401.10119). 
+
+> Our implementation of the `EdgeAttention` is built on top of the code provided in Bergen et al. 2021, Systematic Generalization with Edge Transformers, available at https://github.com/bergen/EdgeTransformer.
 
 ## Install
 We recommend to use the package manager [`conda`](https://docs.conda.io/en/latest/). Once installed run
@@ -36,13 +38,6 @@ respectively, where `/path/to/data/root` specifies the path to your data folder.
 To run the ZINC, Alchemy or QM9 dataset, run
 ```bash
 python molecular-regression/[zinc|alchemy|qm9].py root=/path/to/data/root
-```
-respectively, where `/path/to/data/root` specifies the path to your data folder. This folder will be created if it does not exist.
-
-## Node classification
-To run the Cornell, Texas or Wisconsin dataset, run
-```bash
-python node-classification/webkb.py dataset=[Cornell|Texas|Wisconsin] root=/path/to/data/root
 ```
 respectively, where `/path/to/data/root` specifies the path to your data folder. This folder will be created if it does not exist.
 

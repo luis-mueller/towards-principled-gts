@@ -11,6 +11,8 @@ setup(
         "loguru==0.7.2",
         "tqdm==4.66.1",
         "brec==1.0.0",
+        "pandas==2.2.2",
+        "seaborn==0.13.2",
     ],
     version="0.0.1",
 )

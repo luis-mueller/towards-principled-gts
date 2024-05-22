@@ -1,2 +1,12 @@
 root: ???
 log_file: brec.txt
+
+num_layers: 5
+embed_dim: 32
+num_heads: 4
+batch_size: 16
+seed: 1
+
+wandb_project: null
+wandb_entity: null
+wandb_name: null

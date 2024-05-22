@@ -137,7 +137,7 @@ class FeatureEncoder(torch.nn.Module):
         node_encoder,
         edge_encoder,
         node_dim=None,
-        edge_dim=None,
+        edge_dim=0,
         edge_positional_encoder: str = None,
         edge_positional_dim: int = 0,
         edge_positional_encoder_kwargs={},
