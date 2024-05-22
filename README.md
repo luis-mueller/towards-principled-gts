@@ -41,5 +41,20 @@ python molecular-regression/[zinc|alchemy|qm9].py root=/path/to/data/root
 ```
 respectively, where `/path/to/data/root` specifies the path to your data folder. This folder will be created if it does not exist.
 
+## Timing
+> You may skip this first step if you just want to reproduce the timing figure in the paper
+
+To run the timing experiments, run
+```bash
+python timing/timing.py results_path=/path/to/results
+```
+The results will be written to a file called `results.csv` under `/path/to/results`. 
+
+You can now reproduce the timing figure in the paper by running
+```bash
+python timing/results.py
+```
+which will create a file called `results.pdf` containing the figure.
+
 ## CLRS-30
 For the CLRS experiments see our dedicated fork at [https://github.com/ksmdnl/clrs](https://github.com/ksmdnl/clrs).

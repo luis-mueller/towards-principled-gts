@@ -1,13 +1,13 @@
 # Scaling dimensions
-batch_size: 32
-num_nodes: 10
+batch_size: 1
+num_nodes: 100
 edge_prob: 0.05
 repeats: 100
 
 # Model
 model_name: ET
 embed_dim: 64
-num_heads: 8
+num_heads: 2
 dropout: 0.0
 
 # Outputs
