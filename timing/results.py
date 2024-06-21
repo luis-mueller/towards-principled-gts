@@ -10,7 +10,7 @@ def prepare_df(data, rename):
 
 
 def main():
-    sns.set_style("darkgrid")
+    sns.set_style("whitegrid")
     data = pd.read_csv("./results.csv")
     sns.lineplot(
         prepare_df(
