@@ -13,6 +13,9 @@ setup(
         "brec==1.0.0",
         "pandas==2.2.2",
         "seaborn==0.13.2",
+        "ogb==1.3.6",
+        "prettytable==3.11.0",
+        "rdkit==2024.3.5",
     ],
     version="0.0.1",
 )

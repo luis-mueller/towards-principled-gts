@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 import tqdm
 from functools import partial
-from torch_geometric.utils import to_dense_batch, to_dense_adj, scatter
+from torch_geometric.utils import to_dense_batch, to_dense_adj, scatter, add_self_loops
 from torch_geometric.nn.aggr import Set2Set
 
 
@@ -70,11 +70,15 @@ def token_index_transform(data):
 
 
 class RRWPTransform:
-    def __init__(self, num_iter: int = 0):
+    def __init__(self, num_iter: int = 0, self_loops: bool = False):
         self.num_iter = num_iter
+        self.self_loops = self_loops
 
     def __call__(self, data):
         edge_index, num_nodes = data.edge_index, data.num_nodes
+
+        if self.self_loops:
+            edge_index = add_self_loops(edge_index)
 
         adj: torch.Tensor = torch.zeros(num_nodes, num_nodes)
         adj[edge_index[0], edge_index[1]] = 1
@@ -119,7 +123,11 @@ class EdgePositionalEncoder(torch.nn.Module):
             self.positional_encoder = RRWPEncoder(
                 positional_dim, **positional_encoder_kwargs
             )
-        elif positional_encoder is not None:
+        elif positional_encoder is None:
+            assert (
+                positional_dim == 0
+            ), f"If encoder is None, encoding_dim must be 0, got {positional_dim}"
+        else:
             raise ValueError(
                 f"Positional encoder {positional_encoder} is not supported for edges"
             )
@@ -137,7 +145,7 @@ class FeatureEncoder(torch.nn.Module):
         node_encoder,
         edge_encoder,
         node_dim=None,
-        edge_dim=0,
+        edge_dim=None,
         edge_positional_encoder: str = None,
         edge_positional_dim: int = 0,
         edge_positional_encoder_kwargs={},
@@ -440,6 +448,81 @@ class EdgeAttention(torch.nn.Module):
         return self.linears[-1](x)
 
 
+def triang_attn(q, k):
+    out = q.unsqueeze(3) * k.unsqueeze(1)
+    return out.sum(dim=5)
+
+
+def val_fusion(v1, v2):
+    return v1.unsqueeze(3) * v2.unsqueeze(1)
+
+
+def final_comp(att, val):
+    out = att.unsqueeze(-1) * val
+    return out.sum(dim=2)
+
+
+class FastEdgeAttention(torch.nn.Module):
+    def __init__(self, embed_dim, num_heads, dropout):
+        super().__init__()
+
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.d_k = embed_dim // num_heads
+
+        self.qlin = torch.nn.Linear(embed_dim, embed_dim, bias=False)
+        self.klin = torch.nn.Linear(embed_dim, embed_dim, bias=False)
+        self.v1lin = torch.nn.Linear(embed_dim, embed_dim, bias=False)
+        self.v2lin = torch.nn.Linear(embed_dim, embed_dim, bias=False)
+        self.olin = torch.nn.Linear(embed_dim, embed_dim, bias=False)
+        self.dropout = torch.nn.Dropout(p=dropout)
+
+    @torch.compile
+    def forward(self, query, key, value, mask=None):
+        num_batches = query.size(0)
+        num_nodes_q = query.size(1)
+        num_nodes_k = key.size(1)
+
+        left_k = self.qlin(query)
+        right_k = self.klin(key)
+        left_v = self.v1lin(value)
+        right_v = self.v2lin(value)
+
+        left_k = left_k.view(
+            num_batches, num_nodes_q, num_nodes_q, self.num_heads, self.d_k
+        )
+        right_k = right_k.view(
+            num_batches, key.size(1), key.size(2), self.num_heads, self.d_k
+        )
+        left_v = left_v.view_as(right_k)
+        right_v = right_v.view_as(right_k)
+
+        if hasattr(self, "norms"):
+            left_k = self.norms[0](left_k)
+            right_k = self.norms[1](right_k)
+
+        scores = triang_attn(left_k, right_k) / math.sqrt(self.d_k)
+
+        if mask is not None:
+            scores_dtype = scores.dtype
+            scores = (
+                scores.to(torch.float32)
+                .masked_fill(mask.unsqueeze(4), -1e9)
+                .to(scores_dtype)
+            )
+
+        att = F.softmax(scores, dim=2)
+        att = self.dropout(att)
+        val = val_fusion(left_v, right_v)
+
+        if hasattr(self, "norms"):
+            val = self.norms[2](val)
+
+        x = final_comp(att, val)
+        x = x.view(num_batches, num_nodes_q, num_nodes_k, self.embed_dim)
+        return self.olin(x)
+
+
 class EdgeTransformerLayer(torch.nn.Module):
     def __init__(
         self,
@@ -450,10 +533,14 @@ class EdgeTransformerLayer(torch.nn.Module):
         activation: str = "relu",
         norm: str = "batch",
         norm_first: bool = False,
+        compiled: bool = False,
     ):
         super().__init__()
         self.norm_first = norm_first
-        self.attention = EdgeAttention(embed_dim, num_heads, attention_dropout)
+        if compiled:
+            self.attention = FastEdgeAttention(embed_dim, num_heads, attention_dropout)
+        else:
+            self.attention = EdgeAttention(embed_dim, num_heads, attention_dropout)
 
         if norm_first:
             self.norm = torch.nn.LayerNorm(embed_dim)
@@ -488,6 +575,7 @@ class EdgeTransformer(torch.nn.Module):
         ffn_dropout=0.0,
         head_project_down=True,
         has_edge_attr=False,
+        compiled: bool = False,
     ):
         super().__init__()
         self.feature_encoder = feature_encoder
@@ -502,6 +590,7 @@ class EdgeTransformer(torch.nn.Module):
                     norm="layer",
                     norm_first=True,
                     activation=activation,
+                    compiled=compiled,
                 )
                 for _ in range(num_layers)
             ]

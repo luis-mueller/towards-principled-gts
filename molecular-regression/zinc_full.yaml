@@ -1,8 +1,9 @@
 # Training
-batch_size: 32
+batch_size: 256
 lr: 1e-3
 weight_decay: 1e-5
 gradient_norm: 1.0
+num_epochs: 1000
 
 # Edge Transformer
 num_layers: 10
@@ -12,12 +13,14 @@ activation: gelu
 pooling: sum
 attention_dropout: 0.2
 ffn_dropout: 0.0
+num_workers: 8
 
 # Encoder
 rrwp: no
 
 # Misc
-compiled: no
+checkpoint: null
+compiled: True
 dtype: float32
 seed: 0
 wandb_project: null

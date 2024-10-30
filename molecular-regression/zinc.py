@@ -29,6 +29,13 @@ def main(cfg):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Accelerator: {device}")
 
+    torch.set_float32_matmul_precision("high")
+
+    dtype = cfg.dtype
+    logger.info(f"Data type: {dtype}")
+    tdtype = torch.float32 if dtype == "float32" else torch.bfloat16
+    ctx = torch.autocast(device_type=device, dtype=tdtype, enabled=True)
+
     seed_everything(cfg.seed)
     logger.info(f"Random seed: {cfg.seed} 🎲")
 
@@ -46,10 +53,9 @@ def main(cfg):
     val_dataset = transform_dataset(val_dataset, transform)
     test_dataset = transform_dataset(test_dataset, transform)
 
-    batch_size = 32
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=cfg.batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=True)
 
     if cfg.rrwp:
         feature_encoder = FeatureEncoder(
@@ -82,6 +88,7 @@ def main(cfg):
         attention_dropout=cfg.attention_dropout,
         ffn_dropout=cfg.ffn_dropout,
         has_edge_attr=True,
+        compiled=cfg.compiled,
     ).to(device)
     logger.info(model)
 
@@ -101,7 +108,8 @@ def main(cfg):
             data = data.to(device)
             data.x = data.x.squeeze()
             optimizer.zero_grad()
-            loss = lf(model(data).squeeze(), data.y)
+            with ctx:
+                loss = lf(model(data).squeeze(), data.y)
             loss.backward()
             if cfg.gradient_norm is not None:
                 torch.nn.utils.clip_grad_norm_(
@@ -119,7 +127,8 @@ def main(cfg):
         for data in loader:
             data = data.to(device)
             data.x = data.x.squeeze()
-            error += (model(data).squeeze() - data.y).abs().sum().item()
+            with ctx:
+                error += (model(data).squeeze() - data.y).abs().sum().item()
         return error / len(loader.dataset)
 
     best_val_error = None

@@ -52,6 +52,11 @@ def main(cfg):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Accelerator: {device}")
 
+    dtype = cfg.dtype
+    logger.info(f"Data type: {dtype}")
+    tdtype = torch.float32 if dtype == "float32" else torch.bfloat16
+    ctx = torch.autocast(device_type=device, dtype=tdtype, enabled=True)
+
     seed_everything(cfg.seed)
     logger.info(f"Random seed: {cfg.seed} 🎲")
 
@@ -113,6 +118,7 @@ def main(cfg):
         attention_dropout=cfg.attention_dropout,
         ffn_dropout=cfg.ffn_dropout,
         has_edge_attr=True,
+        compiled=cfg.compiled,
     ).to(device)
     logger.info(model)
 
@@ -135,8 +141,8 @@ def main(cfg):
         for data in train_loader:
             data = data.to(device)
             optimizer.zero_grad()
-            loss = lf(model(data), data.y)
-
+            with ctx:
+                loss = lf(model(data), data.y)
             loss.backward()
             if cfg.gradient_norm is not None:
                 torch.nn.utils.clip_grad_norm_(
@@ -153,7 +159,7 @@ def main(cfg):
 
         for data in loader:
             data = data.to(device)
-            error += ((data.y * std - model(data) * std).abs() / std).sum(dim=0)
+            error += (data.y - model(data)).abs().sum(dim=0)
 
         error = error / len(loader.dataset)
         return error.mean().item()

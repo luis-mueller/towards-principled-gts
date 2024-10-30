@@ -39,7 +39,7 @@ To run the ZINC, Alchemy or QM9 dataset, run
 ```bash
 python molecular-regression/[zinc|alchemy|qm9].py root=/path/to/data/root
 ```
-respectively, where `/path/to/data/root` specifies the path to your data folder. This folder will be created if it does not exist.
+respectively, where `/path/to/data/root` specifies the path to your data folder. This folder will be created if it does not exist. Add `rrwp=True` to use the RRWP encodings.
 
 ## Timing
 > You may skip this first step if you just want to reproduce the timing figure in the paper

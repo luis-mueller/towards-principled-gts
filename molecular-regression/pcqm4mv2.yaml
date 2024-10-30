@@ -1,0 +1,37 @@
+root: .
+checkpoint: null
+
+# Training
+seed: 0
+lr: 2e-4
+min_lr: 0
+weight_decay: 0.1
+gradient_norm: 5.0
+batch_size: 4
+val_batch_size: 4
+num_steps: 2e6
+num_warmup_steps: 6e4
+num_epochs: 100
+num_warmup_epochs: 5
+num_workers: 8
+log_after: 100
+val_after: 13198
+grad_accum: 1
+
+# Model
+compiled: False
+rrwp: False
+rrwp_iter: 0
+edge_positional_dim: 64
+embed_dim: 384
+num_layers: 6
+num_heads: 16
+activation: gelu
+pooling: sum
+attention_dropout: 0.1
+ffn_dropout: 0.1
+
+# Misc
+wandb_project: null
+wandb_entity: null
+wandb_name: null
